@@ -5,6 +5,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Arrange project folders
+        run: |
+          mkdir -p app/src/main/java/com/fifo/pick app/src/main/assets
+          cp AndroidManifest.xml app/src/main/AndroidManifest.xml
+          cp MainActivity.kt app/src/main/java/com/fifo/pick/MainActivity.kt
+          cp index.html app/src/main/assets/index.html
+          for f in "build.gradle" "build (1).gradle"; do
+            [ -f "$f" ] || continue
+            if grep -q "apply false" "$f"; then cp "$f" /tmp/root.gradle; else cp "$f" /tmp/app.gradle; fi
+          done
+          cp /tmp/root.gradle build.gradle
+          cp /tmp/app.gradle app/build.gradle
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
       - uses: android-actions/setup-android@v3
