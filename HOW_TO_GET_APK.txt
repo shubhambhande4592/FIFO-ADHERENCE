@@ -1,0 +1,7 @@
+BUILD APK WITHOUT ANDROID STUDIO (free, from phone or PC browser)
+1. Create a free account at github.com
+2. New repository -> "uploading an existing file" -> upload ALL files of this folder
+   (keep the .github folder; if the web page hides it, drag the whole unzipped folder).
+3. Open the "Actions" tab -> "Build APK" -> wait ~5 minutes until green tick.
+4. Open that run -> Artifacts -> download FIFOPick-apk -> unzip -> app-debug.apk
+5. Copy app-debug.apk to the scanner device and install.

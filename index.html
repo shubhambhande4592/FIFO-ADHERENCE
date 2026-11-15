@@ -1,0 +1,106 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FIFO Pick Scanner</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;background:#f3f4f6;color:#111}
+header{background:#1F4E78;color:#fff;padding:10px 12px;font-size:17px;display:flex;justify-content:space-between}
+.w{padding:8px 10px}input,button{font-size:16px;padding:10px;border:1px solid #999;border-radius:6px}
+input{width:100%;box-sizing:border-box;margin-bottom:6px}#sc{border:2px solid #1F4E78;font-size:20px}
+button{background:#fff;margin:2px}.r{display:flex;flex-wrap:wrap}
+#res{padding:14px;border-radius:8px;font-size:17px;font-weight:bold;margin:6px 0;min-height:50px;background:#ddd}
+.ok{background:#c6efce}.bad{background:#f8cbad;color:#a00}.warn{background:#ffeb9c}
+#qp{background:#fff;border:2px solid #1F4E78;border-radius:8px;padding:8px;margin:6px 0}
+#qp .g{display:flex;gap:8px}#qp .g div{flex:1}#qp label{font-size:13px;color:#444}
+#tt{font-size:22px;font-weight:bold;text-align:center;margin:4px 0;color:#1F4E78}
+#cf{background:#1F4E78;color:#fff;flex:2}
+.ln{background:#fff;border-left:6px solid #bbb;margin:3px 0;padding:6px;font-size:14px}
+.ln.c{border-color:#2e9e4f}.ln.p{border-color:#e6a700}.lg{font-size:12px;border-bottom:1px solid #ddd;padding:3px}
+video{width:100%;max-height:240px}h4{margin:10px 0 4px}
+</style></head><body>
+<header><b>FIFO Pick Scanner</b><span id="cnt"></span></header>
+<div class="w">
+<input id="pk" placeholder="Picker name">
+<input id="sc" placeholder="1) Scan QR here (Material+Batch)" autocomplete="off" inputmode="none">
+<div id="res">Ready. Scan the tag first.</div>
+<div id="qp" hidden>
+<div class="g"><div><label>No. of bags</label><input id="bg" type="number" inputmode="numeric" min="1"></div>
+<div><label>Qty per bag (kg)</label><input id="qb" type="number" inputmode="decimal" step="any"></div></div>
+<div id="tt">Total = 0 kg</div>
+<div class="r"><button id="cf">Confirm</button><button id="cc">Cancel</button></div></div>
+<div class="r"><button id="cam">Camera scan</button><button id="und">Undo last</button><button id="cp">Copy for Excel</button><button id="csv">Download CSV</button><button id="ld">Load plan file</button><button id="clr">Clear log</button></div>
+<input type="file" id="fl" hidden accept=".csv,.tsv,.txt">
+<video id="v" hidden playsinline></video>
+<h4>Plan progress (FIFO order within material)</h4><div id="pl"></div>
+<h4>Scan log</h4><div id="lg"></div></div>
+<script>window.onerror=function(m,u,l){var r=document.getElementById('res');if(r){r.className='bad';r.textContent='JS error: '+m+' (line '+l+')'}};</script>
+<script>
+var PLAN=[{"m":"J-R1001010","d":"J-ISNR-20/SVR-10/ISNR-10/TSR","b":"261254_S10","l":1030,"k":1260,"s":1260.0},{"m":"J-R1201150","d":"J-NR CRUMB RUBBER 120 MESH","b":"261620_125","l":1030,"k":125,"s":25.0},{"m":"J-R1601010","d":"J-IPOL 701 / ELASTO 710/POWE","b":"261727B_JW","l":1030,"k":76,"s":1.0},{"m":"J-R1801030","d":"J-ANTIOXIDANT - TDQ","b":"261474_STA","l":1030,"k":25,"s":25.0},{"m":"J-R1901010","d":"J-MICROCRYSTALLINE WAX","b":"261863A_JW","l":1030,"k":25,"s":25.0},{"m":"J-R2201010","d":"J-ZINC OXIDE WS","b":"261727C_JW","l":1030,"k":100,"s":25.0},{"m":"J-R2201020","d":"J-STEARIC ACID","b":"261728A_JW","l":1030,"k":50,"s":50.0},{"m":"J-R2401040","d":"J-ULTRAFLOW 700S / ZINCOLET ","b":"261516_Z70","l":1030,"k":50,"s":25.0},{"m":"J-R2401240","d":"J-AUROAID AR 262 ANTI-ABRASI","b":"261398_262","l":1030,"k":50,"s":25.0},{"m":"R1001010","d":"ISNR-20/SVR-10/ISNR-10/TSR 1","b":"260922/IND","l":1001,"k":2000,"s":1000.0},{"m":"R1101010","d":"POLYISOPRENE SKI 3 / IR-2200","b":"261062/970","l":1002,"k":3780,"s":1260.0},{"m":"R1101020","d":"SBR 1502","b":"261076/IND","l":1032,"k":7560,"s":1260.0},{"m":"R1101210","d":"PBR- POLYBUTADINE RUBBER GP","b":"260653/SYN","l":1002,"k":960,"s":960.0},{"m":"R1201020","d":"RECLAIM RUBBER DHT60 / NRM60","b":"260937/GRP","l":1001,"k":4200,"s":1050.0},{"m":"R1201020","d":"RECLAIM RUBBER DHT60 / NRM60","b":"260937/GRP","l":1032,"k":1050,"s":1050.0},{"m":"R1201070","d":"EPDM Reclaim Rubber","b":"261043/GRP","l":1001,"k":150,"s":50.0},{"m":"R1201150","d":"NR CRUMB RUBBER 120 MESH","b":"260297/TIN","l":1001,"k":550,"s":25.0},{"m":"R1301010","d":"UNVULVANIZED RUBBER+CARBON M","b":"260860/TEG","l":1002,"k":3780,"s":1260.0},{"m":"R1401020","d":"CARBON BLACK N220","b":"260769/EJB","l":1001,"k":2100,"s":1050.0},{"m":"R1401030","d":"CARBON BLACK N330","b":"260970/BJB","l":1001,"k":1000,"s":1000.0},{"m":"R1401030","d":"CARBON BLACK N330","b":"261045/BJB","l":1032,"k":1000,"s":1000.0},{"m":"R1401040","d":"CARBON BLACK N339","b":"260965/HPB","l":1001,"k":1000,"s":1000.0},{"m":"R1401040","d":"CARBON BLACK N339","b":"260996/HPB","l":1032,"k":2000,"s":1000.0},{"m":"R1401210","d":"AUSTIN BLACK 325","b":"260671/CFI","l":1032,"k":68.01,"s":22.67},{"m":"R1401415","d":"REGENERATED CARBON BLACK- PE","b":"260778/MAJ","l":1001,"k":1500,"s":500.0},{"m":"R1501020","d":"SILICA MFILL 200S","b":"260851/MAD","l":1001,"k":1200,"s":600.0},{"m":"R1601010","d":"IPOL 701 / ELASTO 710/POWER ","b":"260899/GPL","l":1001,"k":406,"s":1.0},{"m":"R1601050","d":"IPOL 2300","b":"261047/GPL","l":1001,"k":210,"s":210.0},{"m":"R1701050","d":"ACCELERATOR TBBS / NS2","b":"260935/SHA","l":1033,"k":25,"s":25.0},{"m":"R1701070","d":"ACCELERATOR CBS","b":"260546/SHN","l":1033,"k":50,"s":25.0},{"m":"R1701080","d":"ACCELERATOR MBTS","b":"260910/SHD","l":1033,"k":25,"s":25.0},{"m":"R1801010","d":"ANTIOXIDANT - 2MBI","b":"260548/JIN","l":1032,"k":25,"s":25.0},{"m":"R1801030","d":"ANTIOXIDANT - TDQ","b":"260910/SHA","l":1033,"k":200,"s":25.0},{"m":"R1801030","d":"ANTIOXIDANT - TDQ","b":"261093/WUE","l":1033,"k":75,"s":25.0},{"m":"R1801040","d":"ANTIOXIDANT - TDQ (NOCIL)","b":"260801/NOI","l":1032,"k":25,"s":25.0},{"m":"R1901010","d":"MICROCRYSTALLINE WAX","b":"260582/RAJ","l":1032,"k":175,"s":25.0},{"m":"R1901050","d":"ANTIOXIDANT - 6PPD","b":"260910/SHN","l":1033,"k":325,"s":25.0},{"m":"R2001030","d":"SULPHUR POWDER","b":"260997/YOG","l":1032,"k":100,"s":50.0},{"m":"R2001130","d":"LUPEROX DC40KE","b":"260969/ARK","l":1001,"k":10,"s":10.0},{"m":"R2101010","d":"ALUMINIUM TRI HYDRATE ATH NC","b":"260939/NIK","l":1032,"k":1600,"s":1600.0},{"m":"R2101290","d":"CORROSAFE 4010  ANTIMONY TRI","b":"260333/SHA","l":1032,"k":25,"s":25.0},{"m":"R2101070","d":"SAYTEX 8010","b":"260831/ALB","l":1032,"k":125,"s":25.0},{"m":"R2101080","d":"CPW LIQUID 70% (KLJ KANACHLO","b":"260250/KLJ","l":1001,"k":750,"s":250.0},{"m":"R2101090","d":"CPW SOLID (JINGCHENG)","b":"260571/HAN","l":1033,"k":50,"s":25.0},{"m":"R2101090","d":"CPW SOLID (JINGCHENG)","b":"260900/HAN","l":1033,"k":400,"s":25.0},{"m":"R2101250","d":"ALUMINIUM HYDROXIDE, NC-111","b":"260210/NIN","l":1032,"k":175,"s":25.0},{"m":"R2201015","d":"ZINC OXIDE WS - RUBAMIN (ZIN","b":"260600/RUB","l":1032,"k":125,"s":25.0},{"m":"R2201020","d":"STEARIC ACID","b":"260933/3F","l":1032,"k":375,"s":25.0},{"m":"R2201030","d":"ULTRABLEND 4000/ ZINCOLET 40","b":"260349/R40","l":1032,"k":250,"s":25.0},{"m":"R2201050","d":"MAGNESIUM OXIDE","b":"260915/EUR","l":1032,"k":25,"s":25.0},{"m":"R2301090","d":"TECHNIC KR140 / KORESIN","b":"251022/TWC","l":1032,"k":25,"s":25.0},{"m":"R2401010","d":"ZINCOLET FL","b":"260587/ZFL","l":1032,"k":25,"s":25.0},{"m":"R2401030","d":"HARMAVIS 50(PIB KVIS10)/200","b":"261040/KOT","l":1032,"k":360,"s":180.0},{"m":"R2401040","d":"ULTRAFLOW 700S / ZINCOLET 70","b":"261006/P70","l":1032,"k":225,"s":25.0},{"m":"R2401240","d":"AUROAID AR 262 (ANTI-ABRASIO","b":"260905/AUO","l":1032,"k":175,"s":25.0},{"m":"R2501040","d":"TECHPRO SCH / MD1 / PP-1891S","b":"260730/SCH","l":1032,"k":25,"s":25.0},{"m":"R2501050","d":"MDIV / CHM65","b":"260880/SHD","l":1033,"k":50,"s":25.0},{"m":"R2501060","d":"RESORCINOL FORMALDEHYDE RESI","b":"261006/B19","l":1032,"k":225,"s":25.0},{"m":"R2501100","d":"AUROBOND 825 / POWERPLAST MR","b":"260788/25L","l":1032,"k":80,"s":20.0},{"m":"R2801030","d":"FORCAL S / MICROCARB CTD 103","b":"261033/DIP","l":1001,"k":1500,"s":1500.0},{"m":"R2901030","d":"PEG 4000","b":"260738/IND","l":1032,"k":50,"s":25.0},{"m":"R2901050","d":"GRAPHITE FINES","b":"260973/VRA","l":1001,"k":25,"s":25.0}];
+var S;try{S=JSON.parse(localStorage.getItem('fifo_s2'))}catch(e){}
+if(!S||!S.plan)S={plan:PLAN,log:[],pk:''};
+var idle=null,P=null,$=function(i){return document.getElementById(i)};
+function save(){try{localStorage.setItem('fifo_s2',JSON.stringify(S))}catch(e){}}
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function r3(n){return Math.round(n*1000)/1000}
+function plKg(k){var n=0;S.plan.forEach(function(x){if(x.m+x.b===k)n+=x.k});return n}
+function pkKg(k){var n=0;S.log.forEach(function(l){if(l.q===k)n+=l.tot});return n}
+function alloc(){var cum={},out=[];S.plan.forEach(function(x){var k=x.m+x.b,c=cum[k]||0;out.push(Math.min(x.k,Math.max(0,pkKg(k)-c)));cum[k]=c+x.k});return out}
+function beep(ok){try{var a=new(window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator();o.frequency.value=ok?880:220;o.connect(a.destination);o.start();setTimeout(function(){o.stop()},ok?120:500)}catch(e){}
+if(!ok&&navigator.vibrate)navigator.vibrate([300,100,300])}
+function show(c,t){$('res').className=c;$('res').textContent=t}
+function proc(q){q=q.trim();if(!q)return;S.pk=$('pk').value.trim();
+var lines=S.plan.filter(function(x){return x.m+x.b===q}),mat=null,v,msg;
+if(lines.length)mat=lines[0].m;else S.plan.forEach(function(x){if(q.indexOf(x.m)===0&&(!mat||x.m.length>mat.length))mat=x.m});
+if(lines.length){v='OK';msg='BATCH OK (FIFO plan) - '+q+' | planned '+r3(plKg(q))+' kg, picked '+r3(pkKg(q))+' kg'}
+else if(mat){v='WRONG';msg='FIFO VIOLATION - wrong batch. Expected: '+S.plan.filter(function(x){return x.m===mat}).map(function(x){return x.b+'@'+x.l}).join(' / ')}
+else{v='UNK';msg='NOT IN TODAY\'S PLAN / UNKNOWN TAG'}
+P={q:q,v:v,mat:mat};show(v==='OK'?'ok':'bad',msg);beep(v==='OK');
+$('qp').hidden=false;$('bg').value='';$('qb').value=lines.length?lines[0].s:'';tot();$('bg').focus()}
+function tot(){var t=(+$('bg').value||0)*(+$('qb').value||0);$('tt').textContent='Total = '+r3(t)+' kg';return t}
+function conf(){if(!P)return;var b=+$('bg').value,w=+$('qb').value,t=b*w;if(!(b>0&&w>0)){show('warn','Enter number of bags and qty per bag');return}
+var st=P.v;if(st==='OK'){if(pkKg(P.q)+t>plKg(P.q)+0.001)st='EXTRA';else{var al=alloc(),pend=null,i0=-1;
+S.plan.forEach(function(x,i){if(i0<0&&x.m+x.b===P.q)i0=i});S.plan.forEach(function(x,i){if(!pend&&i<i0&&x.m===P.mat&&x.m+x.b!==P.q&&al[i]<x.k-0.001)pend=x.b});if(pend)st='WARN:'+pend}}
+S.log.push({t:new Date().toLocaleString('sv-SE'),p:S.pk,q:P.q,b:b,w:w,tot:t,s:st});save();
+var pk=pkKg(P.q),pl=plKg(P.q),m=b+' x '+w+' = '+r3(t)+' kg | picked '+r3(pk)+' / planned '+r3(pl)+' kg';
+if(st==='OK'){show('ok','SAVED OK: '+m);beep(true)}else if(st==='EXTRA'){show('bad','EXTRA QTY over plan: '+m);beep(false)}
+else if(st.indexOf('WARN')===0){show('warn','SAVED, earlier FIFO batch '+st.slice(5)+' still pending: '+m)}else{show('bad','SAVED AS '+st+': '+m);beep(false)}
+P=null;$('qp').hidden=true;draw();$('sc').focus()}
+function draw(){var al=alloc(),done=0,tot_=0;
+$('pl').innerHTML=S.plan.map(function(x,i){tot_+=x.k;done+=al[i];var c=al[i]>=x.k-0.001?'c':al[i]>0?'p':'';
+return'<div class="ln '+c+'"><b>'+esc(x.m)+'</b> '+esc(x.d)+'<br>Batch <b>'+esc(x.b)+'</b> @'+esc(x.l)+' &nbsp; '+r3(al[i])+' / '+r3(x.k)+' kg ('+r3(al[i]/(x.s||1))+' / '+r3(x.k/(x.s||1))+' bags)</div>'}).join('');
+var bad=S.log.filter(function(l){return l.s!=='OK'}).length;
+$('cnt').textContent=r3(done)+'/'+r3(tot_)+' kg | issues '+bad;
+$('lg').innerHTML=S.log.slice().reverse().slice(0,60).map(function(l){return'<div class="lg">'+esc(l.t)+' | '+esc(l.p)+' | '+esc(l.q)+' | '+l.b+' x '+l.w+' = <b>'+r3(l.tot)+' kg</b> | '+esc(l.s)+'</div>'}).join('')}
+$('sc').addEventListener('keydown',function(e){if(e.key==='Enter'||e.keyCode===13){e.preventDefault();clearTimeout(idle);proc(this.value);this.value=''}});
+['bg','qb'].forEach(function(i){$(i).addEventListener('input',tot);$(i).addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();if(i==='bg')$('qb').focus();else conf()}})});
+$('cf').onclick=conf;$('cc').onclick=function(){P=null;$('qp').hidden=true;show('','Cancelled');$('sc').focus()};
+$('pk').value=S.pk||'';$('pk').onchange=function(){S.pk=this.value;save()};
+$('und').onclick=function(){S.log.pop();save();draw();show('','Last scan removed')};
+$('clr').onclick=function(){if(confirm('Clear ALL scans?')){S.log=[];save();draw()}};
+function tsv(){return S.log.map(function(l){return[l.t,l.p,l.q,l.b,l.w].join('\t')}).join('\n')}
+$('cp').onclick=function(){var t=tsv();if(navigator.clipboard)navigator.clipboard.writeText(t).then(function(){show('ok','Copied '+S.log.length+' rows. Paste in Excel Scan Log cell A6')},function(){prompt('Copy:',t)});else prompt('Copy:',t)};
+$('csv').onclick=function(){var t='Time,Picker,QR,Bags,QtyPerBag,TotalQty,Result\n'+S.log.map(function(l){return[l.t,l.p,l.q,l.b,l.w,l.tot,l.s].join(',')}).join('\n');
+if(window.Android&&Android.saveCsv){Android.saveCsv('scan_log_'+Date.now()+'.csv',t);show('ok','CSV saved in Downloads folder');return}var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/csv'}));a.download='scan_log_'+Date.now()+'.csv';a.click()};
+$('ld').onclick=function(){$('fl').click()};
+$('fl').onchange=function(){var f=this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){
+var rows=r.result.split(/\r?\n/).filter(Boolean).map(function(l){return l.split(l.indexOf('\t')>=0?'\t':',')});
+var h=rows[0].map(function(s){return s.trim().toLowerCase()});
+var ix=function(k){return h.findIndex(function(s){return s.indexOf(k)===0})},
+ im=ix('material'),id=ix('material description'),ib=ix('batch'),il=ix('storage'),ik=ix('qty'),is=ix('std'),ip=ix('packs');
+if(im<0||ib<0||ik<0){alert('Need columns: Material, Batch, Qty (kg). Optional: Std Pkg, Packs, Storage Loc');return}
+S.plan=rows.slice(1).filter(function(c){return c[im]&&c[ib]&&+c[ik]>0}).map(function(c){var k=+c[ik],s=is>=0&&+c[is]>0?+c[is]:(ip>=0&&+c[ip]>0?k/+c[ip]:1);
+return{m:c[im].trim(),d:id>=0?c[id].trim():'',b:c[ib].trim(),l:il>=0?c[il].trim():'',k:k,s:s}});
+save();draw();show('ok','Plan loaded: '+S.plan.length+' lines')};r.readAsText(f)};
+var stream=null,last='',lt=0;
+$('cam').onclick=function(){
+if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null;$('v').hidden=true;return}
+if(!('BarcodeDetector' in window)||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){show('warn','Camera scan not supported here - use the hardware scanner');return}
+navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(s){stream=s;var v=$('v');v.srcObject=s;v.hidden=false;v.play();
+var d=new BarcodeDetector({formats:['qr_code']});
+(function loop(){if(!stream)return;d.detect(v).then(function(c){if(c.length&&!P){var q=c[0].rawValue,now=Date.now();if(q!==last||now-lt>2000){last=q;lt=now;proc(q)}}}).catch(function(){}).then(function(){setTimeout(loop,250)})})()
+}).catch(function(e){show('bad','Camera error: '+e.message)})};
+/* hardware scanner: accept Enter, Tab, or auto-submit after short idle */
+$('sc').addEventListener('keydown',function(e){if(e.key==='Tab'||e.keyCode===9){e.preventDefault();clearTimeout(idle);proc(this.value);this.value=''}});
+$('sc').addEventListener('input',function(){var el=this;clearTimeout(idle);idle=setTimeout(function(){if(el.value.length>=8){proc(el.value);el.value=''}},400)});
+$('csv').addEventListener('click',function(){setTimeout(function(){if(window.Android)return;show('warn','CSV requested. If no file appears, use "Copy for Excel" instead.')},500)});
+window.onScan=function(q){proc(q)};
+draw();$('sc').focus();
+</script></body></html>
